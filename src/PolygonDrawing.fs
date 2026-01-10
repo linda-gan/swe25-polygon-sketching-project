@@ -52,18 +52,25 @@ let init () =
     m, Cmd.none // Cmd is optionally to explicitly represent side effects in a safe manner (here we don't bother)
 
 
-(*
-TODO: implement the core logics of the drawing app, which means:
-Depending on the message,
-For AddPoint messages, add the point to the current polygon.
- - if there is no current polygon yet, create a new one with this point as its only vertex.
- - if there is already a polygon, prepend (or append if you like) it to the list of vertices
-For FinishPolygon messages:
- - if there is no current polygon (this means right click was used before even adding a single vertex), ignore the message
- - if there is a current polygon, reset the current polygon to None and add the current polygon as a new element to finishedPolygons.
-*)
 let updateModel (msg : Msg) (model : Model) =
-    model
+    match msg with
+    | AddPoint p ->
+        let newPoint =
+            match model.currentPolygon with
+            | None -> [p]
+            | Some points -> p :: points
+        { model with currentPolygon = Some newPoint }
+        
+    | FinishPolygon ->
+        match model.currentPolygon with
+        | None -> model
+        | Some poly ->
+            { model with
+                currentPolygon = None
+                finishedPolygons = poly :: model.finishedPolygons
+            }
+
+    | _ -> model
 
 // wraps an update function with undo/redo.
 let addUndoRedo (updateFunction : Msg -> Model -> Model) (msg : Msg) (model : Model) =
@@ -74,15 +81,31 @@ let addUndoRedo (updateFunction : Msg -> Model -> Model) (msg : Msg) (model : Mo
         // update the mouse position and create a new model.
         { model with mousePos = p }
     | Undo -> 
-        // TODO implement undo logics, HINT: restore the model stored in past, and replace the current
         // state with it.
-        model
+        match model.past with
+        | None -> model
+        | Some previousModel ->
+            { previousModel with 
+                future = Some model
+                mousePos = model.mousePos
+            }
+        
     | Redo -> 
-        // TODO: same as undo
-        model
+        match model.future with
+        | None -> model
+        | Some nextModel ->
+            { nextModel with 
+                past = Some model 
+                mousePos = model.mousePos
+            }
+        
     | _ -> 
         // use the provided update function for all remaining messages
-        { updateFunction msg model with past = Some model }
+        let newModel = updateFunction msg model
+        { newModel with
+            past = Some model
+            future = None 
+        }
 
 
 let update (msg : Msg) (model : Model)  =
@@ -108,7 +131,7 @@ let viewPolygon (color : string) (points : PolyLine) =
 
 let render (model : Model) (dispatch : Msg -> unit) =
     let border = 
-        Svg.rect [ // i used ; to group together attributes semantically.
+        Svg.rect [ // I used ; to group together attributes semantically.
             svg.x1 0; svg.x2 500
             svg.y1 0; svg.y2 500
             svg.width 500; svg.height 500
