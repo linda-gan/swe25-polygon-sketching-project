@@ -15,16 +15,16 @@ type Coord = { x : float; y : float }
 // "polygon" line. Each list element describes the respective vertex.
 // note that we could use a record here, but a type-alias is more lightweight
 // and serves its purpose.
-// I recommend stroring the coordinates in reverse order, so that each vertex gets prepended
+// I recommend storing the coordinates in reverse order, so that each vertex gets prepended
 // to the list. This way, adding new vertices is O(1).
 type PolyLine = list<Coord>
 
 type Model = {
     // all "finished" polygons, created so far, by convention, new PolyLines can be prepended to this list to
-    // make additions efficent and the code more elegant.
+    // make additions efficient and the code more elegant.
     finishedPolygons : list<PolyLine>
     // the polygon, we are currently working on (and extending, vertex-by-vertex). Having the current
-    // one explicitly as oposed to already in the finishedPolygons list makes the code a bit more elegant
+    // one explicitly as opposed to already in the finishedPolygons list makes the code a bit more elegant
     // and approachable
     currentPolygon : Option<PolyLine>
     // current positon of the mouse (to draw a preview)
@@ -49,18 +49,18 @@ let init () =
     let m = 
         { finishedPolygons = []; currentPolygon = None; // records can be written multiline
           mousePos = None ; past = None; future = None }
-    m, Cmd.none // Cmd is optionally to explicitly represent side-effects in a safe manner (here we don't bother)
+    m, Cmd.none // Cmd is optionally to explicitly represent side effects in a safe manner (here we don't bother)
 
 
 (*
 TODO: implement the core logics of the drawing app, which means:
 Depending on the message,
-For AddPoint mesages, add the point to the current polygon.
+For AddPoint messages, add the point to the current polygon.
  - if there is no current polygon yet, create a new one with this point as its only vertex.
  - if there is already a polygon, prepend (or append if you like) it to the list of vertices
-For FinishPolygon mesages:
+For FinishPolygon messages:
  - if there is no current polygon (this means right click was used before even adding a single vertex), ignore the message
- - if there is a current polygon, reset the current polygon to None and add the current polygon as a new elemnet to finishedPolygons.
+ - if there is a current polygon, reset the current polygon to None and add the current polygon as a new element to finishedPolygons.
 *)
 let updateModel (msg : Msg) (model : Model) =
     model
@@ -116,7 +116,7 @@ let render (model : Model) (dispatch : Msg -> unit) =
         ] 
 
     // collect all svg elements of all finished polygons
-    let finisehdPolygons = 
+    let finishedPolygons = 
         model.finishedPolygons |> List.collect (viewPolygon "green")
     let currentPolygon =
         match model.currentPolygon with
@@ -129,7 +129,7 @@ let render (model : Model) (dispatch : Msg -> unit) =
                 // if we have a current mouse position, prepend the mouse position to the resulting polygon
                 viewPolygon "red" (preview :: p)
  
-    let svgElements = List.concat [finisehdPolygons; currentPolygon]
+    let svgElements = List.concat [finishedPolygons; currentPolygon]
 
     Html.div [
         prop.style [style.custom("userSelect","none")]
@@ -149,10 +149,10 @@ let render (model : Model) (dispatch : Msg -> unit) =
             Svg.svg [
                 svg.width 500; svg.height 500
                 svg.onMouseMove (fun mouseEvent -> 
-                    // compute SVG relative coordinates, using javascript function
+                    // compute SVG relative coordinates, using JavaScript function
                     let pos = getSvgCoordinates mouseEvent
 
-                    // fable requires to "send" messages via side-effect. 
+                    // fable requires to "send" messages via side effect. 
                     // Can be moved into UI system, e.g. see  https://elm-lang.org/examples/buttons
                     dispatch (SetCursorPos (Some pos))
                 )
@@ -167,7 +167,7 @@ let render (model : Model) (dispatch : Msg -> unit) =
                         else
                             []
 
-                    // fable requires to "send" messages via side-effect. 
+                    // fable requires to "send" messages via side effect. 
                     // Can be moved into UI system, e.g. see  https://elm-lang.org/examples/buttons
                     msgs |> List.iter dispatch
                 )

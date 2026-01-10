@@ -12,6 +12,7 @@ dist/
 *.suo
 *.user
 *.sln.docstates
+.idea
 
 # Xamarin Studio / monodevelop user-specific
 *.userprefs
