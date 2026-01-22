@@ -3,14 +3,14 @@ import tkinter as tk
 class DrawingApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Baseline: Simple Polyline Drawer")
+        self.root.title("Baseline: Polygon Sketching")
         
-        # --- Lists  of STATES (Mutable) ---
+        # --- STATE (Mutable) ---
         self.polygons = []       # List of finished shapes (lists of points)
         self.current_poly = []   # Current shape being drawn
         self.mouse_pos = (0, 0)  # Current mouse position
         
-        # Undo/Redo Stacks/Lists (Mutable)
+        # Undo/Redo Stacks
         self.undo_stack = []
         self.redo_stack = []
 
@@ -22,13 +22,24 @@ class DrawingApp:
         controls.pack()
         tk.Button(controls, text="Undo", command=self.undo).pack(side=tk.LEFT)
         tk.Button(controls, text="Redo", command=self.redo).pack(side=tk.LEFT)
+        tk.Button(controls, text="Clear all", command=self.clearall).pack(side=tk.LEFT)
 
-        # Button bindings for Undo/Redo and finish
-        self.canvas.bind("<Button-1>", self.on_click)           # Left Click
-        self.canvas.bind("<Double-Button-1>", self.on_finish)   # Double Click
-        self.canvas.bind("<Motion>", self.on_move)              # Mouse Move
+        # --- EVENTS ---
+        self.canvas.bind("<Button-1>", self.on_click)        # Left Click
+        self.canvas.bind("<Double-Button-1>", self.on_finish)# Double Click
+        self.canvas.bind("<Motion>", self.on_move)           # Mouse Move
 
-    # Business Logic for Undo/Redo
+        #self.save_state() # Initial state
+
+    # --- LOGIC (Imperative) ---
+    
+    def clearall(self):
+        self.save_state() # Save before modifying
+        self.canvas.delete("all")
+        self.polygons = []
+        self.current_poly = []
+        self.redraw()
+
     def save_state(self):
         """Snapshots current state for Undo"""
         # We must clone the lists to save a snapshot, otherwise python references the same object
@@ -47,7 +58,7 @@ class DrawingApp:
 
     def undo(self):
         if len(self.undo_stack) > 0:
-            # 1. save the CURRENT live state to Redo (needed to come back later)
+            # 1. Snapshot the CURRENT live state to Redo (so we can come back)
             current_state = {
                 'polygons': [p[:] for p in self.polygons],
                 'current_poly': self.current_poly[:]
@@ -60,18 +71,19 @@ class DrawingApp:
 
     def redo(self):
         if self.redo_stack:
-            # 1. save the CURRENT live state to Undo (needed to come back later)
+            # 1. save the CURRENT live state to Undo
             current_state = {
-                'polygons': [p[:] for p in self.polygons],
-                'current_poly': self.current_poly[:]
+                'polygons': [p[:] for p in self.polygons], # : list clicing to copy
+                'current_poly': self.current_poly[:] 
             }
             self.undo_stack.append(current_state)
 
-            # 2. Pop the future state from Redo and restore it
+            # 2. populate the future state from Redo and restore it
             next_state = self.redo_stack.pop()
             self.restore_state(next_state)
 
-    def on_click(self, event): 
+    def on_click(self, event):
+        self.save_state() # Save before modifying
         self.current_poly.append((event.x, event.y))
         self.redraw()
 
@@ -87,7 +99,6 @@ class DrawingApp:
             self.redraw()
 
     def redraw(self):
-        # Clear canvas
         self.canvas.delete("all")
         
         # Draw finished shapes (Now as open lines, not filled polygons)
@@ -102,7 +113,7 @@ class DrawingApp:
             if len(self.current_poly) > 1:
                 self.canvas.create_line(self.current_poly, fill="red", width=2)
             
-            # line which is displayed during mouse movement (rubber-band )
+            # Draw rubber-band line (Preview)
             last_point = self.current_poly[-1]
             self.canvas.create_line(last_point, self.mouse_pos, fill="gray", dash=(4, 2))
 
